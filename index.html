@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cloud Sketch Pad</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --border: #1f2937;
+        --shadow: 0 20px 45px rgba(15, 23, 42, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, sans-serif;
+        background: radial-gradient(circle at top left, #1e293b, var(--bg));
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 2vw + 1.5rem, 3rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 760px;
+        line-height: 1.6;
+      }
+
+      .workspace {
+        margin-top: 32px;
+        display: grid;
+        grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
+        gap: 24px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .canvas-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .canvas-wrapper {
+        border-radius: 18px;
+        background: #0b1120;
+        border: 1px dashed rgba(148, 163, 184, 0.3);
+        padding: 16px;
+      }
+
+      canvas {
+        width: 100%;
+        height: 520px;
+        background: #ffffff;
+        border-radius: 12px;
+        cursor: crosshair;
+        display: block;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        border-radius: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        background: #0b1220;
+        color: var(--text);
+      }
+
+      input[type="color"] {
+        padding: 0;
+        height: 44px;
+      }
+
+      button {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #0b1120;
+        box-shadow: 0 10px 20px rgba(56, 189, 248, 0.4);
+      }
+
+      button.secondary {
+        background: #1f2937;
+        color: var(--text);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .helper-text {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .github-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .status {
+        min-height: 20px;
+        font-size: 0.85rem;
+        color: #a7f3d0;
+      }
+
+      .status.error {
+        color: #fecaca;
+      }
+
+      .note {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+      }
+
+      @media (max-width: 900px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>Cloud Sketch Pad</h1>
+        <p>
+          Draw with your mouse, stylus, or finger. When you're ready, save a copy to your
+          computer or push it directly to a GitHub repository as a PNG.
+        </p>
+      </header>
+
+      <div class="workspace">
+        <section class="panel canvas-panel">
+          <div class="toolbar">
+            <div class="field">
+              <label for="color">Brush color</label>
+              <input id="color" type="color" value="#1d4ed8" />
+            </div>
+            <div class="field">
+              <label for="size">Brush size</label>
+              <input id="size" type="range" min="2" max="40" value="8" />
+            </div>
+            <div class="field">
+              <label for="mode">Mode</label>
+              <select id="mode">
+                <option value="draw">Draw</option>
+                <option value="erase">Erase</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button id="clear" class="secondary" type="button">Clear canvas</button>
+            </div>
+          </div>
+
+          <div class="canvas-wrapper">
+            <canvas id="canvas" width="960" height="520" aria-label="Drawing canvas"></canvas>
+          </div>
+
+          <div class="toolbar">
+            <button id="save-local" class="secondary" type="button">Download PNG</button>
+            <button id="save-github" class="primary" type="button">Save to GitHub</button>
+          </div>
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </section>
+
+        <aside class="panel">
+          <h2>Save to GitHub</h2>
+          <p class="helper-text">
+            Provide a GitHub personal access token with <strong>repo</strong> scope. The
+            image is uploaded as a new commit in the selected repository path.
+          </p>
+          <div class="github-grid">
+            <div class="field">
+              <label for="owner">Owner / org</label>
+              <input id="owner" type="text" placeholder="octocat" />
+            </div>
+            <div class="field">
+              <label for="repo">Repository</label>
+              <input id="repo" type="text" placeholder="my-sketches" />
+            </div>
+            <div class="field">
+              <label for="path">File path</label>
+              <input id="path" type="text" value="sketches/painting.png" />
+            </div>
+            <div class="field">
+              <label for="message">Commit message</label>
+              <input id="message" type="text" value="Add new sketch" />
+            </div>
+            <div class="field">
+              <label for="token">Personal access token</label>
+              <input id="token" type="password" placeholder="ghp_..." />
+            </div>
+          </div>
+          <div class="note">
+            <p class="helper-text">
+              Tip: If you want to keep tokens out of the browser, you can still use the
+              “Download PNG” button and upload manually to GitHub.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const colorInput = document.getElementById("color");
+      const sizeInput = document.getElementById("size");
+      const modeSelect = document.getElementById("mode");
+      const clearButton = document.getElementById("clear");
+      const statusEl = document.getElementById("status");
+      const saveLocalButton = document.getElementById("save-local");
+      const saveGithubButton = document.getElementById("save-github");
+
+      const ownerInput = document.getElementById("owner");
+      const repoInput = document.getElementById("repo");
+      const pathInput = document.getElementById("path");
+      const messageInput = document.getElementById("message");
+      const tokenInput = document.getElementById("token");
+
+      let drawing = false;
+      let lastPoint = { x: 0, y: 0 };
+
+      const setStatus = (message, isError = false) => {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", isError);
+      };
+
+      const getCanvasPoint = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+          x: (event.clientX - rect.left) * scaleX,
+          y: (event.clientY - rect.top) * scaleY,
+        };
+      };
+
+      const beginDraw = (event) => {
+        drawing = true;
+        lastPoint = getCanvasPoint(event);
+      };
+
+      const draw = (event) => {
+        if (!drawing) return;
+        const currentPoint = getCanvasPoint(event);
+        context.strokeStyle =
+          modeSelect.value === "erase" ? "#ffffff" : colorInput.value;
+        context.lineWidth = Number(sizeInput.value);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.beginPath();
+        context.moveTo(lastPoint.x, lastPoint.y);
+        context.lineTo(currentPoint.x, currentPoint.y);
+        context.stroke();
+        lastPoint = currentPoint;
+      };
+
+      const endDraw = () => {
+        drawing = false;
+      };
+
+      const clearCanvas = () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      };
+
+      const downloadPNG = () => {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = "sketch.png";
+        link.click();
+      };
+
+      const uploadToGithub = async () => {
+        setStatus("");
+        const owner = ownerInput.value.trim();
+        const repo = repoInput.value.trim();
+        const path = pathInput.value.trim();
+        const message = messageInput.value.trim();
+        const token = tokenInput.value.trim();
+
+        if (!owner || !repo || !path || !message || !token) {
+          setStatus("Please fill out all GitHub fields.", true);
+          return;
+        }
+
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        const base64Data = canvas.toDataURL("image/png").split(",")[1];
+
+        try {
+          setStatus("Uploading sketch to GitHub...");
+          const response = await fetch(apiUrl, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message,
+              content: base64Data,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Upload failed.");
+          }
+
+          setStatus("Sketch saved to GitHub! Check your repository.");
+        } catch (error) {
+          setStatus(`GitHub upload failed: ${error.message}`, true);
+        }
+      };
+
+      canvas.addEventListener("pointerdown", beginDraw);
+      canvas.addEventListener("pointermove", draw);
+      canvas.addEventListener("pointerup", endDraw);
+      canvas.addEventListener("pointerleave", endDraw);
+
+      clearButton.addEventListener("click", clearCanvas);
+      saveLocalButton.addEventListener("click", downloadPNG);
+      saveGithubButton.addEventListener("click", uploadToGithub);
+
+      clearCanvas();
+    </script>
+  </body>
+</html>
