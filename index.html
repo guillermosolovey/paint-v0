@@ -158,11 +158,6 @@
         line-height: 1.5;
       }
 
-      .github-grid {
-        display: grid;
-        gap: 12px;
-      }
-
       .status {
         min-height: 20px;
         font-size: 0.85rem;
@@ -179,6 +174,42 @@
         border-radius: 12px;
         background: rgba(30, 41, 59, 0.7);
         border: 1px solid rgba(56, 189, 248, 0.2);
+      }
+
+      .preview-card {
+        margin-top: 20px;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: rgba(15, 23, 42, 0.6);
+      }
+
+      .preview-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .preview-frame {
+        width: 100%;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 160px;
+      }
+
+      .preview-frame img {
+        max-width: 100%;
+        display: block;
+      }
+
+      .preview-meta {
+        margin-top: 10px;
+        font-size: 0.8rem;
+        color: var(--muted);
       }
 
       @media (max-width: 900px) {
@@ -236,36 +267,28 @@
         <aside class="panel">
           <h2>Save to GitHub</h2>
           <p class="helper-text">
-            Provide a GitHub personal access token with <strong>repo</strong> scope. The
-            image is uploaded as a new commit in the selected repository path.
+            Click the <strong>Save to GitHub</strong> button and enter a GitHub personal
+            access token when prompted. The sketch will be committed to the default
+            repository and path shown below.
           </p>
-          <div class="github-grid">
-            <div class="field">
-              <label for="owner">Owner / org</label>
-              <input id="owner" type="text" placeholder="octocat" />
-            </div>
-            <div class="field">
-              <label for="repo">Repository</label>
-              <input id="repo" type="text" placeholder="my-sketches" />
-            </div>
-            <div class="field">
-              <label for="path">File path</label>
-              <input id="path" type="text" value="sketches/painting.png" />
-            </div>
-            <div class="field">
-              <label for="message">Commit message</label>
-              <input id="message" type="text" value="Add new sketch" />
-            </div>
-            <div class="field">
-              <label for="token">Personal access token</label>
-              <input id="token" type="password" placeholder="ghp_..." />
-            </div>
+          <div class="note">
+            <p class="helper-text">
+              Target: <strong id="target-repo">octocat/sketch-gallery</strong><br />
+              Path: <strong id="target-path">sketches/latest.png</strong>
+            </p>
           </div>
           <div class="note">
             <p class="helper-text">
               Tip: If you want to keep tokens out of the browser, you can still use the
               “Download PNG” button and upload manually to GitHub.
             </p>
+          </div>
+          <div class="preview-card">
+            <h3>Live preview</h3>
+            <div class="preview-frame">
+              <img id="preview" alt="Latest drawing preview" />
+            </div>
+            <div id="preview-meta" class="preview-meta">No strokes yet.</div>
           </div>
         </aside>
       </div>
@@ -282,11 +305,10 @@
       const saveLocalButton = document.getElementById("save-local");
       const saveGithubButton = document.getElementById("save-github");
 
-      const ownerInput = document.getElementById("owner");
-      const repoInput = document.getElementById("repo");
-      const pathInput = document.getElementById("path");
-      const messageInput = document.getElementById("message");
-      const tokenInput = document.getElementById("token");
+      const targetRepoLabel = document.getElementById("target-repo");
+      const targetPathLabel = document.getElementById("target-path");
+      const previewImage = document.getElementById("preview");
+      const previewMeta = document.getElementById("preview-meta");
 
       let drawing = false;
       let lastPoint = { x: 0, y: 0 };
@@ -295,6 +317,14 @@
         statusEl.textContent = message;
         statusEl.classList.toggle("error", isError);
       };
+
+      const defaultOwner = "octocat";
+      const defaultRepo = "sketch-gallery";
+      const defaultPath = "sketches/latest.png";
+      const defaultMessage = "Add new sketch";
+
+      targetRepoLabel.textContent = `${defaultOwner}/${defaultRepo}`;
+      targetPathLabel.textContent = defaultPath;
 
       const getCanvasPoint = (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -328,12 +358,14 @@
 
       const endDraw = () => {
         drawing = false;
+        updatePreview("Preview updated");
       };
 
       const clearCanvas = () => {
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
+        updatePreview("Canvas cleared");
       };
 
       const downloadPNG = () => {
@@ -343,20 +375,23 @@
         link.click();
       };
 
+      function updatePreview(label = "Preview updated") {
+        previewImage.src = canvas.toDataURL("image/png");
+        const timestamp = new Date().toLocaleTimeString();
+        previewMeta.textContent = `${label} at ${timestamp}`;
+      }
+
       const uploadToGithub = async () => {
         setStatus("");
-        const owner = ownerInput.value.trim();
-        const repo = repoInput.value.trim();
-        const path = pathInput.value.trim();
-        const message = messageInput.value.trim();
-        const token = tokenInput.value.trim();
-
-        if (!owner || !repo || !path || !message || !token) {
-          setStatus("Please fill out all GitHub fields.", true);
+        const token = window.prompt(
+          "Enter a GitHub personal access token with repo scope to upload."
+        );
+        if (!token) {
+          setStatus("Upload canceled. No token provided.", true);
           return;
         }
 
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        const apiUrl = `https://api.github.com/repos/${defaultOwner}/${defaultRepo}/contents/${defaultPath}`;
         const base64Data = canvas.toDataURL("image/png").split(",")[1];
 
         try {
@@ -368,7 +403,7 @@
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              message,
+              message: defaultMessage,
               content: base64Data,
             }),
           });
